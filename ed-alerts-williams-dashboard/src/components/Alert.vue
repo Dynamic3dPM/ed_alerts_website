@@ -125,14 +125,19 @@ const processData = (data, pairName) => {
     pair.lastDate = currentDate
 
     if (pair.previousWilliams !== null && previousData) {
-        const wasInZone = pair.previousWilliams >= -80 && pair.previousWilliams <= -20
-        const nowOutOfZone = pair.currentWilliams > -20 || pair.currentWilliams < -80
+        const wasOutOfZone = pair.previousWilliams > -80 && pair.previousWilliams < -20 // Between -20 and -80
+        const nowInZoneBullish = pair.currentWilliams >= -20 // Above -20
+        const nowInZoneBearish = pair.currentWilliams <= -80 // Below -80
 
-        if (wasInZone && nowOutOfZone) {
+        if (wasOutOfZone && nowInZoneBullish) {
             pair.crossTime = new Date(latestData.datetime).toLocaleString()
-            const direction = pair.currentWilliams > -20 ? 'above -20' : 'below -80'
-            pair.alert = `Crossed ${direction} on ${pair.crossTime}`
-            console.log(`${pairName} crossed out of zone at ${pair.crossTime}`)
+            pair.alert = `Bullish crossover above -20 on ${pair.crossTime}`
+            console.log(`${pairName} entered bullish zone at ${pair.crossTime}`)
+            triggerAlert(pairName, pair.alert)
+        } else if (wasOutOfZone && nowInZoneBearish) {
+            pair.crossTime = new Date(latestData.datetime).toLocaleString()
+            pair.alert = `Bearish crossover below -80 on ${pair.crossTime}`
+            console.log(`${pairName} entered bearish zone at ${pair.crossTime}`)
             triggerAlert(pairName, pair.alert)
         }
     }
@@ -143,27 +148,36 @@ const processData = (data, pairName) => {
 const getCardColor = (pair) => {
     if (pair.currentWilliams === null && !pair.error) return 'white'
     if (pair.error) return 'grey lighten-4'
-    return (pair.currentWilliams >= -80 && pair.currentWilliams <= -20) ? 'red lighten-5' : 'green lighten-5'
+    // In Zone (bullish or bearish): green or red
+    return (pair.currentWilliams >= -20 || pair.currentWilliams <= -80) ?
+        (pair.currentWilliams >= -20 ? 'green lighten-5' : 'red lighten-5') :
+        'grey lighten-2' // Out of zone (neutral)
 }
 
 const getIconColor = (pair) => {
     if (pair.currentWilliams === null && !pair.error) return 'grey'
     if (pair.error) return 'grey darken-1'
-    return (pair.currentWilliams >= -80 && pair.currentWilliams <= -20) ? 'red darken-1' : 'green darken-1'
+    return (pair.currentWilliams >= -20 || pair.currentWilliams <= -80) ?
+        (pair.currentWilliams >= -20 ? 'green darken-1' : 'red darken-1') :
+        'grey darken-2'
 }
 
 const getStatusColor = (pair) => {
     if (pair.currentWilliams === null && !pair.error) return 'grey'
     if (pair.error) return 'warning'
     if (pair.alert) return 'info'
-    return (pair.currentWilliams >= -80 && pair.currentWilliams <= -20) ? 'error' : 'success'
+    return (pair.currentWilliams >= -20 || pair.currentWilliams <= -80) ?
+        (pair.currentWilliams >= -20 ? 'success' : 'error') :
+        'grey'
 }
 
 const getStatusText = (pair) => {
     if (pair.error) return 'Error'
     if (pair.currentWilliams === null) return 'No Data'
     if (pair.alert) return 'Alert'
-    return (pair.currentWilliams >= -80 && pair.currentWilliams <= -20) ? 'In Zone' : 'Out of Zone'
+    return (pair.currentWilliams >= -20 || pair.currentWilliams <= -80) ?
+        (pair.currentWilliams >= -20 ? 'Bullish' : 'Bearish') :
+        'Neutral'
 }
 
 onMounted(() => {
